@@ -22,9 +22,11 @@ const form: React.FC<FormProps> = props => {
 	const [state, setState] = useState({ isError: false });
 	const values            = Form.useWatch([], form);
 	useEffect(() => {
-		form.validateFields({ validateOnly: true })
-		    .then(() => setState({ isError: false }),
-		          () => setState({ isError: true }));
+		setTimeout(() => { // to prevent `Warning: An update to Form inside a test was not wrapped in act(...)` in `Form.test.tsx`
+			form.validateFields({ validateOnly: true })
+			    .then(() => setState({ isError: false }),
+			          () => setState({ isError: true }));
+		}, 0);
 	}, [values]);
 
 	const _handleCancelEditing = (e: React.MouseEvent<HTMLSpanElement>) => props.handleCancelEdit && props.handleCancelEdit();
