@@ -1,0 +1,14 @@
+type Duty {
+	id: String!
+	name: String!
+}
+
+type Query {
+	duties: [Duty]!,
+}
+
+type Mutation {
+	createDuty(id: String!, name: String!): Duty!
+	updateDuty(id: String!, name: String!): Duty!
+	deleteDuty(id: String!): Duty!
+}

@@ -1,0 +1,4 @@
+CREATE TABLE duty (
+    id VARCHAR NOT NULL,
+    name VARCHAR NOT NULL
+)
