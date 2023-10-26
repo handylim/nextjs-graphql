@@ -1,0 +1,37 @@
+version: '3'
+
+networks:
+    nextjs-graphql:
+
+services:
+    web:
+        command: node server.js
+        container_name: web
+        image: web:latest
+        build:
+            context: .
+        networks:
+            - nextjs-graphql
+        stdin_open: true
+        tty: true
+        restart: always
+        depends_on:
+            - db
+        ports:
+            - "${PORT:-3000}:3000" # default port is 3000
+        environment:
+            - NODE_ENV=production
+            - TZ=Asia/Hong_Kong
+    db:
+        container_name: db
+        image: postgres:alpine
+        restart: always
+        networks:
+            - nextjs-graphql
+        ports:
+            - "5432:5432"
+        volumes:
+            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+        environment:
+            - POSTGRES_PASSWORD=password
+            - TZ=Asia/Hong_Kong
