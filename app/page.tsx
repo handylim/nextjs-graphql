@@ -102,7 +102,7 @@ export default function Home() {
 		}
 	};
 
-	const PAGE_SIZE = 2;
+	const PAGE_SIZE = 5;
 	return (
 		<ApolloProvider client={ client }>
 			<Flex style={ { padding: '6rem', minHeight: '100vh' } }

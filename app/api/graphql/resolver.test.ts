@@ -5,7 +5,7 @@
 import db               from '@/lib/db/duty';
 import resolver         from '@/app/api/graphql/resolver';
 import { faker }        from '@faker-js/faker';
-import { ok }           from 'neverthrow';
+import { err, ok }      from 'neverthrow';
 import { GraphQLError } from 'graphql';
 
 jest.mock('../../../lib/db/duty');
@@ -38,6 +38,17 @@ describe('Duty resolver', () => {
 			const duties = await resolver.Query.duties();
 
 			expect(duties).toBe(EXPECTED_RESPONSE);
+		});
+
+		it('can properly handle database failure to get all duties', async () => {
+			dbMocked.getDuties.mockResolvedValue(err(new GraphQLError('Unknown error', {
+				extensions: { code: 'INTERNAL_SERVER_ERROR' }
+			})));
+
+			const duties = await resolver.Query.duties();
+
+			expect(duties).toBeInstanceOf(GraphQLError);
+			expect((duties as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 		});
 	});
 
@@ -102,6 +113,24 @@ describe('Duty resolver', () => {
 			expect((duty as GraphQLError).extensions.code).toEqual('BAD_USER_INPUT');
 		});
 
+		it('can properly handle database failure to check existing duty', async () => {
+			const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
+
+			dbMocked.isExist.mockResolvedValue(err(new GraphQLError('Unknown error', {
+				extensions: { code: 'INTERNAL_SERVER_ERROR' }
+			})));
+			dbMocked.createDuty.mockResolvedValue(err(new GraphQLError('Unknown error', {
+				extensions: { code: 'INTERNAL_SERVER_ERROR' }
+			})));
+
+			const duty = await resolver.Mutation.createDuty(null, { id, name });
+
+			expect(dbMocked.isExist).toHaveBeenCalledTimes(1);
+			expect(dbMocked.createDuty).toHaveBeenCalledTimes(0);
+			expect(duty).toBeInstanceOf(GraphQLError);
+			expect((duty as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
+		});
+
 		it('success on non-existing duty', async () => {
 			const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
 
@@ -114,6 +143,22 @@ describe('Duty resolver', () => {
 			expect(dbMocked.createDuty).toHaveBeenCalledTimes(1);
 			expect((duty as Duty)?.id).toEqual(id);
 			expect((duty as Duty)?.name).toEqual(name);
+		});
+
+		it('can properly handle database failure to create duty', async () => {
+			const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
+
+			dbMocked.isExist.mockResolvedValue(ok(false));
+			dbMocked.createDuty.mockResolvedValue(err(new GraphQLError('Unknown error', {
+				extensions: { code: 'INTERNAL_SERVER_ERROR' }
+			})));
+
+			const duty = await resolver.Mutation.createDuty(null, { id, name });
+
+			expect(dbMocked.isExist).toHaveBeenCalledTimes(1);
+			expect(dbMocked.createDuty).toHaveBeenCalledTimes(1);
+			expect(duty).toBeInstanceOf(GraphQLError);
+			expect((duty as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 		});
 	});
 
@@ -178,6 +223,24 @@ describe('Duty resolver', () => {
 			expect((duty as GraphQLError).extensions.code).toEqual('BAD_USER_INPUT');
 		});
 
+		it('can properly handle database failure to check existing duty', async () => {
+			const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
+
+			dbMocked.isExist.mockResolvedValue(err(new GraphQLError('Unknown error', {
+				extensions: { code: 'INTERNAL_SERVER_ERROR' }
+			})));
+			dbMocked.updateDuty.mockResolvedValue(err(new GraphQLError('Unknown error', {
+				extensions: { code: 'INTERNAL_SERVER_ERROR' }
+			})));
+
+			const duty = await resolver.Mutation.updateDuty(null, { id, name });
+
+			expect(dbMocked.isExist).toHaveBeenCalledTimes(1);
+			expect(dbMocked.updateDuty).toHaveBeenCalledTimes(0);
+			expect(duty).toBeInstanceOf(GraphQLError);
+			expect((duty as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
+		});
+
 		it('success on existing duty', async () => {
 			const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
 
@@ -190,6 +253,22 @@ describe('Duty resolver', () => {
 			expect(dbMocked.updateDuty).toHaveBeenCalledTimes(1);
 			expect((duty as Duty)?.id).toEqual(id);
 			expect((duty as Duty)?.name).toEqual(name);
+		});
+
+		it('can properly handle database failure to update duty', async () => {
+			const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
+
+			dbMocked.isExist.mockResolvedValue(ok(true));
+			dbMocked.updateDuty.mockResolvedValue(err(new GraphQLError('Unknown error', {
+				extensions: { code: 'INTERNAL_SERVER_ERROR' }
+			})));
+
+			const duty = await resolver.Mutation.updateDuty(null, { id, name });
+
+			expect(dbMocked.isExist).toHaveBeenCalledTimes(1);
+			expect(dbMocked.updateDuty).toHaveBeenCalledTimes(1);
+			expect(duty).toBeInstanceOf(GraphQLError);
+			expect((duty as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 		});
 	});
 
@@ -224,6 +303,24 @@ describe('Duty resolver', () => {
 			expect((duty as GraphQLError).extensions.code).toEqual('BAD_USER_INPUT');
 		});
 
+		it('can properly handle database failure to check existing duty', async () => {
+			const id = faker.string.uuid();
+
+			dbMocked.isExist.mockResolvedValue(err(new GraphQLError('Unknown error', {
+				extensions: { code: 'INTERNAL_SERVER_ERROR' }
+			})));
+			dbMocked.deleteDuty.mockResolvedValue(err(new GraphQLError('Unknown error', {
+				extensions: { code: 'INTERNAL_SERVER_ERROR' }
+			})));
+
+			const duty = await resolver.Mutation.deleteDuty(null, { id });
+
+			expect(dbMocked.isExist).toHaveBeenCalledTimes(1);
+			expect(dbMocked.deleteDuty).toHaveBeenCalledTimes(0);
+			expect(duty).toBeInstanceOf(GraphQLError);
+			expect((duty as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
+		});
+
 		it('success on existing duty', async () => {
 			const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
 
@@ -236,6 +333,22 @@ describe('Duty resolver', () => {
 			expect(dbMocked.deleteDuty).toHaveBeenCalledTimes(1);
 			expect((duty as Duty)?.id).toEqual(id);
 			expect((duty as Duty)?.name).toEqual(name);
+		});
+
+		it('can properly handle database failure to delete duty', async () => {
+			const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
+
+			dbMocked.isExist.mockResolvedValue(ok(true));
+			dbMocked.deleteDuty.mockResolvedValue(err(new GraphQLError('Unknown error', {
+				extensions: { code: 'INTERNAL_SERVER_ERROR' }
+			})));
+
+			const duty = await resolver.Mutation.deleteDuty(null, { id });
+
+			expect(dbMocked.isExist).toHaveBeenCalledTimes(1);
+			expect(dbMocked.deleteDuty).toHaveBeenCalledTimes(1);
+			expect(duty).toBeInstanceOf(GraphQLError);
+			expect((duty as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 		});
 	});
 });
