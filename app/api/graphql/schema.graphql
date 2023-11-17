@@ -8,7 +8,7 @@ type Query {
 }
 
 type Mutation {
-	createDuty(id: String!, name: String!): Duty!
+	createDuty(name: String!): Duty!
 	updateDuty(id: String!, name: String!): Duty!
 	deleteDuty(id: String!): Duty!
 }

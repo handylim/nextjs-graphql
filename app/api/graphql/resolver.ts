@@ -1,5 +1,7 @@
 import db               from '@/lib/db/duty';
 import { GraphQLError } from 'graphql';
+import { v4 as uuidv4 } from 'uuid';
+import { Result }       from 'neverthrow';
 
 export default {
 	Query   : {
@@ -12,16 +14,16 @@ export default {
 		}
 	},
 	Mutation: {
-		createDuty: async (_: any, args: { id: string, name: string }): Promise<Duty | GraphQLError> => {
-			if (args.id === '' || args.name === '')
+		createDuty: async (_: any, args: { name: string }): Promise<Duty | GraphQLError> => {
+			if (args.name === '')
 				return new GraphQLError('Invalid user input', { extensions: { code: 'BAD_USER_INPUT' } });
 
-			const isExist = await db.isExist(args.id);
+			const isExist = await db.isExist({ name: args.name });
 			if (isExist.isOk()) {
 				if (isExist.value)
 					return new GraphQLError('Duty already existed', { extensions: { code: 'BAD_USER_INPUT' } });
 				else {
-					const result = await db.createDuty(args.id, args.name);
+					const result = await db.createDuty(uuidv4(), args.name);
 					if (result.isOk())
 						return result.value;
 					else
@@ -35,14 +37,20 @@ export default {
 			if (args.id === '' || args.name === '')
 				return new GraphQLError('Invalid user input', { extensions: { code: 'BAD_USER_INPUT' } });
 
-			const isExist = await db.isExist(args.id);
+			const isExist = Result.combine(await Promise.all([db.isExist({ id: args.id }),
+			                                                  db.isExist({ name: args.name })]));
 			if (isExist.isOk()) {
-				if (isExist.value) {
-					const result = await db.updateDuty(args.id, args.name);
-					if (result.isOk())
-						return result.value;
-					else
-						return result.error;
+				if (isExist.value[0]) { // check for existing duty id
+					if (isExist.value[1]) // check for duplicate name
+						return new GraphQLError(`Duty's name already exist`,
+						                        { extensions: { code: 'BAD_USER_INPUT' } });
+					else {
+						const result = await db.updateDuty(args.id, args.name);
+						if (result.isOk())
+							return result.value;
+						else
+							return result.error;
+					}
 				}
 				else
 					return new GraphQLError('Duty not found', { extensions: { code: 'BAD_USER_INPUT' } });
@@ -54,7 +62,7 @@ export default {
 			if (args.id === '')
 				return new GraphQLError('Invalid user input', { extensions: { code: 'BAD_USER_INPUT' } });
 
-			const isExist = await db.isExist(args.id);
+			const isExist = await db.isExist({ id: args.id });
 			if (isExist.isOk()) {
 				if (isExist.value) {
 					const result = await db.deleteDuty(args.id);

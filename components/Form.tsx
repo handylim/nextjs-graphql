@@ -5,10 +5,18 @@ import { Button, Form, Input }        from 'antd';
 
 interface FormProps {
 	initialValue?: { id: string, name: string }
-	handleCancelEdit?: Function
+	handleCancelEdit?: () => void
 	isLoading: boolean
-	handleClearAlert: Function
-	handleSubmit: Function
+	handleClearAlert: () => void
+}
+
+interface CreateFormProps extends FormProps {
+	handleSubmit: (name: string) => Promise<void>
+}
+
+interface UpdateFormProps extends FormProps {
+	initialValue: { id: string, name: string }
+	handleSubmit: (id: string, name: string) => Promise<void>
 }
 
 type FormItem = {
@@ -16,7 +24,7 @@ type FormItem = {
 	name: string
 };
 
-const form: React.FC<FormProps> = props => {
+const form: React.FC<CreateFormProps | UpdateFormProps> = props => {
 	const [form] = Form.useForm<FormItem>();
 
 	const [state, setState] = useState({ isError: false });
@@ -31,12 +39,13 @@ const form: React.FC<FormProps> = props => {
 
 	const _handleCancelEditing = (e: React.MouseEvent<HTMLSpanElement>) => props.handleCancelEdit && props.handleCancelEdit();
 
-	const _handleOnValuesChange = (changedValues: any, values: FormItem) => props.handleClearAlert();
+	const _handleOnValuesChange = (changedValues: string, values: FormItem) => props.handleClearAlert();
+
 	const _handleOnFinish       = async (value: FormItem) => {
 		if (value.id) // update duty
 			props.handleSubmit(value.id, value.name);
 		else // create duty
-			props.handleSubmit(value.name);
+			(props as CreateFormProps).handleSubmit(value.name);
 		form.resetFields();
 	};
 

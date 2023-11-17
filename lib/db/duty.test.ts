@@ -2,10 +2,10 @@
  * @jest-environment node
  */
 
+import assert           from 'node:assert';
 import pg               from 'pg';
 import duty             from '@/lib/db/duty';
-import { faker }        from '@faker-js/faker';
-import { GraphQLError } from 'graphql/index';
+import { GraphQLError } from 'graphql';
 
 jest.mock('pg', () => {
 	const mockPool = { query: jest.fn() };
@@ -18,6 +18,9 @@ const pgMocked   = jest.mocked(pg, { shallow: false });
 const poolMocked = new pgMocked.Pool({});
 
 describe('Duty database', () => {
+	const id   = '3c649136-a832-4f13-a526-edeb27ab6299';
+	const name = 'Duty 1';
+
 	beforeEach(() => {
 		jest.spyOn(console, 'info').mockImplementation(() => {});
 		jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -31,11 +34,10 @@ describe('Duty database', () => {
 				                                              rows: [{ exists: true }]
 			                                              }));
 
-			const result = await duty.isExist(faker.string.uuid());
+			const result = await duty.isExist({ id });
 
-			expect(result.isOk()).toBe(true);
-			if (result.isOk())
-				expect(result.value).toBe(true);
+			assert(result.isOk());
+			expect(result.value).toBe(true);
 		});
 
 		it('returns false for non-existing duty', async () => {
@@ -44,11 +46,10 @@ describe('Duty database', () => {
 				                                              rows: [{ exists: false }]
 			                                              }));
 
-			const result = await duty.isExist(faker.string.uuid());
+			const result = await duty.isExist({ name });
 
-			expect(result.isOk()).toBe(true);
-			if (result.isOk())
-				expect(result.value).toBe(false);
+			assert(result.isOk());
+			expect(result.value).toBe(false);
 		});
 
 		describe('can properly handle database failure to check for existence of a duty', () => {
@@ -56,26 +57,24 @@ describe('Duty database', () => {
 				const mock = jest.spyOn(poolMocked, 'query');
 				mock.mockImplementation(() => Promise.reject(new Error('Error: Database failure')));
 
-				const result = await duty.isExist(faker.string.uuid());
+				const result = await duty.isExist({ id });
 
-				expect(result.isOk()).toBe(false);
-				if (!result.isOk()) {
-					expect(result.error).toBeInstanceOf(GraphQLError);
-					expect((result.error as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
-				}
+				assert(!result.isOk());
+				expect(result.error).toBeInstanceOf(GraphQLError);
+				expect(result.error.message).toEqual('Internal server error');
+				expect(result.error.extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 			});
 
 			it('reject with a non-Error instance', async () => {
 				const mock = jest.spyOn(poolMocked, 'query');
 				mock.mockImplementation(() => Promise.reject());
 
-				const result = await duty.isExist(faker.string.uuid());
+				const result = await duty.isExist({ id });
 
-				expect(result.isOk()).toBe(false);
-				if (!result.isOk()) {
-					expect(result.error).toBeInstanceOf(GraphQLError);
-					expect((result.error as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
-				}
+				assert(!result.isOk());
+				expect(result.error).toBeInstanceOf(GraphQLError);
+				expect(result.error.message).toEqual('Unknown error');
+				expect(result.error.extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 			});
 		});
 	});
@@ -87,21 +86,19 @@ describe('Duty database', () => {
 
 			const result = await duty.getDuties();
 
-			expect(result.isOk()).toBe(true);
-			if (result.isOk())
-				expect(result.value).toStrictEqual([]);
+			assert(result.isOk());
+			expect(result.value).toStrictEqual([]);
 		});
 
 		it('returns an array of Duty when there are duties in the database', async () => {
-			const DUTIES = [{ id: faker.string.uuid(), name: faker.person.jobDescriptor() }];
+			const DUTIES = [{ id, name }];
 			const mock   = jest.spyOn(poolMocked, 'query');
 			mock.mockImplementation(() => Promise.resolve({ rows: DUTIES }));
 
 			const result = await duty.getDuties();
 
-			expect(result.isOk()).toBe(true);
-			if (result.isOk())
-				expect(result.value).toStrictEqual(DUTIES);
+			assert(result.isOk());
+			expect(result.value).toStrictEqual(DUTIES);
 		});
 
 		describe('can properly handle database failure to get all duties', () => {
@@ -111,11 +108,10 @@ describe('Duty database', () => {
 
 				const result = await duty.getDuties();
 
-				expect(result.isOk()).toBe(false);
-				if (!result.isOk()) {
-					expect(result.error).toBeInstanceOf(GraphQLError);
-					expect((result.error as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
-				}
+				assert(!result.isOk());
+				expect(result.error).toBeInstanceOf(GraphQLError);
+				expect(result.error.message).toEqual('Internal server error');
+				expect(result.error.extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 			});
 
 			it('reject with a non-Error instance', async () => {
@@ -124,117 +120,102 @@ describe('Duty database', () => {
 
 				const result = await duty.getDuties();
 
-				expect(result.isOk()).toBe(false);
-				if (!result.isOk()) {
-					expect(result.error).toBeInstanceOf(GraphQLError);
-					expect((result.error as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
-				}
+				assert(!result.isOk());
+				expect(result.error).toBeInstanceOf(GraphQLError);
+				expect(result.error.message).toEqual('Unknown error');
+				expect(result.error.extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 			});
 		});
 	});
 
 	describe('createDuty', () => {
 		it('returns a newly created duty upon successful creation', async () => {
-			const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
-			const DUTY       = { id, name };
-			const mock       = jest.spyOn(poolMocked, 'query');
+			const DUTY = { id, name };
+			const mock = jest.spyOn(poolMocked, 'query');
 			mock.mockImplementation(() => Promise.resolve({ rows: [DUTY] }));
 
 			const result = await duty.createDuty(id, name);
 
-			expect(result.isOk()).toBe(true);
-			if (result.isOk())
-				expect(result.value).toStrictEqual(DUTY);
+			assert(result.isOk());
+			expect(result.value).toStrictEqual(DUTY);
 		});
 
 		describe('can properly handle database failure upon failing to create duty', () => {
 			it('reject with an Error instance', async () => {
-				const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
-				const mock       = jest.spyOn(poolMocked, 'query');
+				const mock = jest.spyOn(poolMocked, 'query');
 				mock.mockImplementation(() => Promise.reject(new Error('Error: Database failure')));
 
 				const result = await duty.createDuty(id, name);
 
-				expect(result.isOk()).toBe(false);
-				if (!result.isOk()) {
-					expect(result.error).toBeInstanceOf(GraphQLError);
-					expect((result.error as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
-				}
+				assert(!result.isOk());
+				expect(result.error).toBeInstanceOf(GraphQLError);
+				expect(result.error.message).toEqual('Internal server error');
+				expect(result.error.extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 			});
 
 			it('reject with a non-Error instance', async () => {
-				const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
-				const mock       = jest.spyOn(poolMocked, 'query');
+				const mock = jest.spyOn(poolMocked, 'query');
 				mock.mockImplementation(() => Promise.reject());
 
 				const result = await duty.createDuty(id, name);
 
-				expect(result.isOk()).toBe(false);
-				if (!result.isOk()) {
-					expect(result.error).toBeInstanceOf(GraphQLError);
-					expect((result.error as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
-				}
+				assert(!result.isOk());
+				expect(result.error).toBeInstanceOf(GraphQLError);
+				expect(result.error.message).toEqual('Unknown error');
+				expect(result.error.extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 			});
 		});
 	});
 
 	describe('updateDuty', () => {
 		it('returns a newly updated duty upon successful update', async () => {
-			const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
-			const DUTY       = { id, name };
-			const mock       = jest.spyOn(poolMocked, 'query');
+			const DUTY = { id, name };
+			const mock = jest.spyOn(poolMocked, 'query');
 			mock.mockImplementation(() => Promise.resolve({ rows: [DUTY] }));
 
 			const result = await duty.updateDuty(id, name);
 
-			expect(result.isOk()).toBe(true);
-			if (result.isOk())
-				expect(result.value).toStrictEqual(DUTY);
+			assert(result.isOk());
+			expect(result.value).toStrictEqual(DUTY);
 		});
 
 		describe('can properly handle database failure upon failing to update duty', () => {
 			it('reject with an Error instance', async () => {
-				const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
-				const mock       = jest.spyOn(poolMocked, 'query');
+				const mock = jest.spyOn(poolMocked, 'query');
 				mock.mockImplementation(() => Promise.reject(new Error('Error: Database failure')));
 
 				const result = await duty.updateDuty(id, name);
 
-				expect(result.isOk()).toBe(false);
-				if (!result.isOk()) {
-					expect(result.error).toBeInstanceOf(GraphQLError);
-					expect((result.error as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
-				}
+				assert(!result.isOk());
+				expect(result.error).toBeInstanceOf(GraphQLError);
+				expect(result.error.message).toEqual('Internal server error');
+				expect(result.error.extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 			});
 
 			it('reject with a non-Error instance', async () => {
-				const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
-				const mock       = jest.spyOn(poolMocked, 'query');
+				const mock = jest.spyOn(poolMocked, 'query');
 				mock.mockImplementation(() => Promise.reject());
 
 				const result = await duty.updateDuty(id, name);
 
-				expect(result.isOk()).toBe(false);
-				if (!result.isOk()) {
-					expect(result.error).toBeInstanceOf(GraphQLError);
-					expect((result.error as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
-				}
+				assert(!result.isOk());
+				expect(result.error).toBeInstanceOf(GraphQLError);
+				expect(result.error.message).toEqual('Unknown error');
+				expect(result.error.extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 			});
 		});
 	});
 
 	describe('deleteDuty', () => {
 		it('returns a deleted duty upon successful deletion', async () => {
-			const [id, name] = [faker.string.uuid(), faker.person.jobDescriptor()];
-			const DUTY       = { id, name };
-			const mock       = jest.spyOn(poolMocked, 'query');
+			const DUTY = { id, name };
+			const mock = jest.spyOn(poolMocked, 'query');
 			mock.mockImplementation(() => Promise.resolve({ rows: [DUTY] }));
 
 			const result = await duty.deleteDuty(id);
 
-			expect(result.isOk()).toBe(true);
-			if (result.isOk())
-				expect(result.value).toStrictEqual(DUTY);
+			assert(result.isOk());
+			expect(result.value).toStrictEqual(DUTY);
 		});
 
 		describe('can properly handle database failure upon failing to delete duty', () => {
@@ -242,26 +223,24 @@ describe('Duty database', () => {
 				const mock = jest.spyOn(poolMocked, 'query');
 				mock.mockImplementation(() => Promise.reject(new Error('Error: Database failure')));
 
-				const result = await duty.deleteDuty(faker.string.uuid());
+				const result = await duty.deleteDuty(id);
 
-				expect(result.isOk()).toBe(false);
-				if (!result.isOk()) {
-					expect(result.error).toBeInstanceOf(GraphQLError);
-					expect((result.error as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
-				}
+				assert(!result.isOk());
+				expect(result.error).toBeInstanceOf(GraphQLError);
+				expect(result.error.message).toEqual('Internal server error');
+				expect(result.error.extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 			});
 
 			it('reject with a non-Error instance', async () => {
 				const mock = jest.spyOn(poolMocked, 'query');
 				mock.mockImplementation(() => Promise.reject());
 
-				const result = await duty.deleteDuty(faker.string.uuid());
+				const result = await duty.deleteDuty(id);
 
-				expect(result.isOk()).toBe(false);
-				if (!result.isOk()) {
-					expect(result.error).toBeInstanceOf(GraphQLError);
-					expect((result.error as GraphQLError).extensions.code).toEqual('INTERNAL_SERVER_ERROR');
-				}
+				assert(!result.isOk());
+				expect(result.error).toBeInstanceOf(GraphQLError);
+				expect(result.error.message).toEqual('Unknown error');
+				expect(result.error.extensions.code).toEqual('INTERNAL_SERVER_ERROR');
 			});
 		});
 	});

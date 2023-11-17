@@ -10,14 +10,14 @@ const pool = new pg.Pool({
 	                         database: process.env.DB_DATABASE
                          });
 
-const isExist = async (id: string): Promise<Result<boolean, GraphQLError>> => {
+const isExist = async (condition: { id?: string, name?: string }): Promise<Result<boolean, GraphQLError>> => {
 	try {
-		const result = await pool.query<{ exists: boolean }>('SELECT EXISTS(SELECT 1 FROM duty WHERE id = $1)', [id]);
+		const result = await pool.query<{ exists: boolean }>('SELECT EXISTS(SELECT 1 FROM duty WHERE CASE WHEN $1::text IS NOT NULL THEN id = $1 ELSE name = $2 END)', [condition.id ?? null, condition.name ?? null]);
 		return ok(result.rows[0].exists);
 	}
 	catch (e) {
 		console.error(e);
-		return err(new GraphQLError(e instanceof Error ? e.message : 'Unknown error', {
+		return err(new GraphQLError(e instanceof Error ? 'Internal server error' : 'Unknown error', {
 			extensions: { code: 'INTERNAL_SERVER_ERROR' }
 		}));
 	}
@@ -30,7 +30,7 @@ const getDuties = async (): Promise<Result<Array<Duty>, GraphQLError>> => {
 	}
 	catch (e) {
 		console.error(e);
-		return err(new GraphQLError(e instanceof Error ? e.message : 'Unknown error', {
+		return err(new GraphQLError(e instanceof Error ? 'Internal server error' : 'Unknown error', {
 			extensions: { code: 'INTERNAL_SERVER_ERROR' }
 		}));
 	}
@@ -45,7 +45,7 @@ const createDuty = async (id: string, name: string): Promise<Result<Duty, GraphQ
 	}
 	catch (e) {
 		console.error(e);
-		return err(new GraphQLError(e instanceof Error ? e.message : 'Unknown error', {
+		return err(new GraphQLError(e instanceof Error ? 'Internal server error' : 'Unknown error', {
 			extensions: { code: 'INTERNAL_SERVER_ERROR' }
 		}));
 	}
@@ -59,7 +59,7 @@ const updateDuty = async (id: string, name: string): Promise<Result<Duty, GraphQ
 		return ok(duty);
 	}
 	catch (e) {
-		return err(new GraphQLError(e instanceof Error ? e.message : 'Unknown error', {
+		return err(new GraphQLError(e instanceof Error ? 'Internal server error' : 'Unknown error', {
 			extensions: { code: 'INTERNAL_SERVER_ERROR' }
 		}));
 	}
@@ -73,7 +73,7 @@ const deleteDuty = async (id: string): Promise<Result<Duty, GraphQLError>> => {
 		return ok(duty);
 	}
 	catch (e) {
-		return err(new GraphQLError(e instanceof Error ? e.message : 'Unknown error', {
+		return err(new GraphQLError(e instanceof Error ? 'Internal server error' : 'Unknown error', {
 			extensions: { code: 'INTERNAL_SERVER_ERROR' }
 		}));
 	}

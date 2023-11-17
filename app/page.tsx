@@ -10,19 +10,18 @@ import {
 	gql,
 	useQuery,
 	useMutation
-}                                        from "@apollo/client";
+}                                        from '@apollo/client';
 import { Alert, Flex, List, Typography } from 'antd';
 import { DeleteOutlined, EditOutlined }  from '@ant-design/icons';
-import Form                              from '@/components/Form';
 import { Nullable, Undefinable }         from 'tsdef';
-import { v4 as uuidv4 }                  from 'uuid';
+import Form                              from '@/components/Form';
 
 const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({ cache: new InMemoryCache(), uri: '/api/graphql' });
 const dutyQuery          = gql`query Duties {
 	duties { id name }
 }`;
-const createDutyMutation = gql`mutation Duty($id: String!, $name: String!) {
-	createDuty(id: $id, name: $name) { id name }
+const createDutyMutation = gql`mutation Duty($name: String!) {
+	createDuty(name: $name) { id name }
 }`;
 const updateDutyMutation = gql`mutation Duty($id: String!, $name: String!) {
 	updateDuty(id: $id, name: $name) { id name }
@@ -32,32 +31,31 @@ const deleteDutyMutation = gql`mutation Duty($id: String!) {
 }`;
 
 export default function Home() {
-	const queryResult = useQuery<{ duties: Array<Duty> }>(dutyQuery, { client, fetchPolicy: 'no-cache' });
+	const queryResult                    = useQuery<{ duties: Array<Duty> }>(dutyQuery, { client, fetchPolicy: 'no-cache' });
 	const [createDuty, createDutyResult] = useMutation<Duty>(createDutyMutation, { client, fetchPolicy: 'no-cache' });
 	const [updateDuty, updateDutyResult] = useMutation<Duty>(updateDutyMutation, { client, fetchPolicy: 'no-cache' });
 	const [deleteDuty, deleteDutyResult] = useMutation<Duty>(deleteDutyMutation, { client, fetchPolicy: 'no-cache' });
 
 	const [state, setState] = useState({
-		                                   editedIndex: null as Nullable<string>,
-		                                   apolloError: queryResult.error as Undefinable<ApolloError>
+		                                   editedIndex : null as Nullable<string>,
+		                                   errorMessage: queryResult.error?.message as Undefinable<string>
 	                                   });
 
 	const _handleClearAlert = () => setState({
 		                                         ...state,
-		                                         apolloError: undefined
+		                                         errorMessage: undefined
 	                                         });
 
 	const _handleOnCreate = async (name: string) => {
 		try {
-			const id = uuidv4();
-			await createDuty({ variables: { id, name } });
+			await createDuty({ variables: { name } });
 			queryResult.refetch();
 		}
 		catch (e) {
 			if (e instanceof ApolloError)
 				setState({
 					         ...state,
-					         apolloError: e
+					         errorMessage: e.message
 				         });
 		}
 	};
@@ -82,7 +80,7 @@ export default function Home() {
 			if (e instanceof ApolloError)
 				setState({
 					         ...state,
-					         apolloError: e
+					         errorMessage: e.message
 				         });
 		}
 	};
@@ -97,7 +95,7 @@ export default function Home() {
 			if (e instanceof ApolloError)
 				setState({
 					         ...state,
-					         apolloError: e
+					         errorMessage: e.message
 				         });
 		}
 	};
@@ -112,9 +110,9 @@ export default function Home() {
 			      align='center'>
 
 				{
-					state.apolloError &&
+					state.errorMessage &&
 					<Alert message='Error'
-					       description={ `${state.apolloError.name}: ${state.apolloError.message}` }
+					       description={ state.errorMessage }
 					       style={ { width: 750 } }
 					       type='error'
 					       showIcon />

@@ -11,8 +11,8 @@ const server = new ApolloServer({
 		                                if (process.env.NODE_ENV === 'development')
 			                                return formattedError;
 		                                else {
-			                                const { locations, path, ...rest } = formattedError;
-			                                return { ...rest };
+			                                const { message, extensions } = formattedError;
+			                                return { message, extensions }; // only passed necessary error information to the front-end; filter out all possible sensitive information
 		                                }
 	                                }
                                 });
