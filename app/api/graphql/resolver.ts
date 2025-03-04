@@ -1,6 +1,6 @@
 import db               from '@/lib/db/duty';
 import { GraphQLError } from 'graphql';
-import { v4 as uuidv4 } from 'uuid';
+import { ulid }         from 'ulid';
 import { Result }       from 'neverthrow';
 
 export default {
@@ -23,7 +23,7 @@ export default {
 				if (isExist.value)
 					return new GraphQLError('Duty already existed', { extensions: { code: 'BAD_USER_INPUT' } });
 				else {
-					const result = await db.createDuty(uuidv4(), args.name);
+					const result = await db.createDuty(ulid(), args.name);
 					if (result.isOk())
 						return result.value;
 					else

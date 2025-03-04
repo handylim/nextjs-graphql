@@ -8,7 +8,7 @@ const handleClearAlertMocked = jest.fn();
 const handleSubmitMocked     = jest.fn();
 
 describe('Form component', () => {
-	const id   = '230bd56d-a777-4799-a863-72876d2375bb';
+	const id   = '01JMGAEX00BJQADQJW52NCFHX5';
 	const name = 'Duty 1';
 
 	beforeAll(() => {

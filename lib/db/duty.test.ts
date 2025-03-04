@@ -18,7 +18,7 @@ const pgMocked   = jest.mocked(pg, { shallow: false });
 const poolMocked = new pgMocked.Pool({});
 
 describe('Duty database', () => {
-	const id   = '3c649136-a832-4f13-a526-edeb27ab6299';
+	const id   = '01JMGAEX00BJQADQJW52NCFHX5';
 	const name = 'Duty 1';
 
 	beforeEach(() => {

@@ -12,7 +12,10 @@ const pool = new pg.Pool({
 
 const isExist = async (condition: { id?: string, name?: string }): Promise<Result<boolean, GraphQLError>> => {
 	try {
-		const result = await pool.query<{ exists: boolean }>('SELECT EXISTS(SELECT 1 FROM duty WHERE CASE WHEN $1::text IS NOT NULL THEN id = $1 ELSE name = $2 END)', [condition.id ?? null, condition.name ?? null]);
+		const result = await pool.query<{ exists: boolean }>(
+			'SELECT EXISTS(SELECT 1 FROM duty WHERE ($1::text IS NOT NULL AND id = $1) OR ($2::text IS NOT NULL AND name = $2))',
+			[condition.id ?? null, condition.name ?? null]
+		);
 		return ok(result.rows[0].exists);
 	}
 	catch (e) {
@@ -25,7 +28,7 @@ const isExist = async (condition: { id?: string, name?: string }): Promise<Resul
 
 const getDuties = async (): Promise<Result<Array<Duty>, GraphQLError>> => {
 	try {
-		const result = await pool.query<Duty>('SELECT * FROM duty');
+		const result = await pool.query<Duty>('SELECT * FROM duty ORDER BY id');
 		return ok(result.rows);
 	}
 	catch (e) {
