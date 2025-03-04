@@ -1,40 +1,19 @@
 'use client';
 
-import React, { useState }               from 'react';
-import {
-	ApolloClient,
-	ApolloProvider,
-	ApolloError,
-	InMemoryCache,
-	NormalizedCacheObject,
-	gql,
-	useQuery,
-	useMutation
-}                                        from '@apollo/client';
-import { Alert, Flex, List, Typography } from 'antd';
-import { DeleteOutlined, EditOutlined }  from '@ant-design/icons';
-import { Nullable, Undefinable }         from 'tsdef';
-import Form                              from '@/components/Form';
-
-const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({ cache: new InMemoryCache(), uri: '/api/graphql' });
-const dutyQuery          = gql`query Duties {
-	duties { id name }
-}`;
-const createDutyMutation = gql`mutation Duty($name: String!) {
-	createDuty(name: $name) { id name }
-}`;
-const updateDutyMutation = gql`mutation Duty($id: String!, $name: String!) {
-	updateDuty(id: $id, name: $name) { id name }
-}`;
-const deleteDutyMutation = gql`mutation Duty($id: String!) {
-	deleteDuty(id: $id) { id name }
-}`;
+import React, { useState }                                    from 'react';
+import { ApolloProvider, ApolloError, useQuery, useMutation } from '@apollo/client';
+import { Alert, Flex, List, Typography }                      from 'antd';
+import { DeleteOutlined, EditOutlined }                       from '@ant-design/icons';
+import { Nullable, Undefinable }                              from 'tsdef';
+import Form                                                   from '@/components/Form';
+import { client }                                             from '@/lib/apollo/client';
+import { CREATE_DUTY, DUTIES, UPDATE_DUTY, DELETE_DUTY }      from '@/lib/apollo/duty';
 
 export default function Home() {
-	const queryResult                    = useQuery<{ duties: Array<Duty> }>(dutyQuery, { client, fetchPolicy: 'no-cache' });
-	const [createDuty, createDutyResult] = useMutation<Duty>(createDutyMutation, { client, fetchPolicy: 'no-cache' });
-	const [updateDuty, updateDutyResult] = useMutation<Duty>(updateDutyMutation, { client, fetchPolicy: 'no-cache' });
-	const [deleteDuty, deleteDutyResult] = useMutation<Duty>(deleteDutyMutation, { client, fetchPolicy: 'no-cache' });
+	const queryResult                    = useQuery<{ duties: Array<Duty> }>(DUTIES, { client, fetchPolicy: 'no-cache' });
+	const [createDuty, createDutyResult] = useMutation<Duty>(CREATE_DUTY, { client, fetchPolicy: 'no-cache', onCompleted: () => queryResult.refetch() });
+	const [updateDuty, updateDutyResult] = useMutation<Duty>(UPDATE_DUTY, { client, fetchPolicy: 'no-cache', onCompleted: () => queryResult.refetch() });
+	const [deleteDuty, deleteDutyResult] = useMutation<Duty>(DELETE_DUTY, { client, fetchPolicy: 'no-cache', onCompleted: () => queryResult.refetch() });
 
 	const [state, setState] = useState({
 		                                   editedIndex : null as Nullable<string>,
@@ -49,7 +28,6 @@ export default function Home() {
 	const _handleOnCreate = async (name: string) => {
 		try {
 			await createDuty({ variables: { name } });
-			queryResult.refetch();
 		}
 		catch (e) {
 			if (e instanceof ApolloError)
@@ -74,7 +52,6 @@ export default function Home() {
 		try {
 			await updateDuty({ variables: { id, name }});
 			_handleCancelEdit();
-			queryResult.refetch();
 		}
 		catch (e) {
 			if (e instanceof ApolloError)
@@ -89,7 +66,6 @@ export default function Home() {
 		try {
 			_handleClearAlert();
 			await deleteDuty({ variables: { id } });
-			queryResult.refetch();
 		}
 		catch (e) {
 			if (e instanceof ApolloError)
@@ -101,6 +77,19 @@ export default function Home() {
 	};
 
 	const PAGE_SIZE = 5;
+	const duties    = queryResult.data?.duties ?? [];
+	// adding placeholder items to prevent layout shifts and maintain consistent list height across pagination states
+	if (duties.length > 0 && duties.length % PAGE_SIZE > 0) {
+		const placeholderCount          = PAGE_SIZE - (duties.length % PAGE_SIZE);
+		const placeholders: Array<Duty> = Array(placeholderCount).fill(null)
+		                                                         .map((_, index) =>
+			                                                              ({
+				                                                              id  : `empty-${index}`,
+				                                                              name: 'emptyDuty'
+			                                                              }));
+		duties.push(...placeholders);
+	}
+
 	return (
 		<ApolloProvider client={ client }>
 			<Flex style={ { padding: '6rem', minHeight: '100vh' } }
@@ -129,7 +118,7 @@ export default function Home() {
 				      bordered
 				      size='large'
 				      pagination={ queryResult.data?.duties.length ?? 0 > PAGE_SIZE ? { pageSize: PAGE_SIZE } : false }
-				      dataSource={ queryResult.data?.duties ?? [] }
+				      dataSource={ duties }
 				      renderItem={ item => {
 					      if (item.id === state.editedIndex) // editing mode
 						      return (
@@ -141,6 +130,13 @@ export default function Home() {
 								            handleSubmit={ _handleOnUpdate } />
 							      </List.Item>
 						      );
+					      else if (item.id.startsWith('empty-')) // for placeholder items to prevent layout shifts
+							  return (
+								  <List.Item key={ item.id }
+								             style={ { visibility: 'hidden' } }>
+									  { item.name }
+								  </List.Item>
+							  );
 					      else
 						      return (
 							      <List.Item key={ item.id }

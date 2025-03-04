@@ -14,7 +14,7 @@ jest.mock('../../../lib/db/duty');
 const dbMocked = jest.mocked(db, { shallow: false });
 
 describe('Duty resolver', () => {
-	const id   = '230bd56d-a777-4799-a863-72876d2375bb';
+	const id   = '01JMGAEX00BJQADQJW52NCFHX5';
 	const name = 'Duty 1';
 
 	afterEach(() => jest.clearAllMocks());
@@ -31,9 +31,9 @@ describe('Duty resolver', () => {
 		});
 
 		it('gets all duties', async () => {
-			let EXPECTED_RESPONSE = [{ id: 'a33de6b9-480d-4b57-a56d-5159adb7a80f', name: 'Duty 1' },
-			                         { id: 'efc5f7cf-aed1-4fad-ba87-41d8b3f21e38', name: 'Duty 2' },
-			                         { id: '128ee80e-b48a-468c-98e1-8f109b957188', name: 'Duty 3' }] as Array<Duty>;
+			let EXPECTED_RESPONSE = [{ id: '01JMGAR1Z0E1JD2AXYX5YJ52A7', name: 'Duty 1' },
+			                         { id: '01JMGB16Y0SVZ6ZBJX3XQG9FQF', name: 'Duty 2' },
+			                         { id: '01JMGBABX0A4ST2YAGHYHHKVTD', name: 'Duty 3' }] as Array<Duty>;
 
 			dbMocked.getDuties.mockResolvedValue(ok(EXPECTED_RESPONSE));
 
