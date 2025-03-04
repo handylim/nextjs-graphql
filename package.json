@@ -2,6 +2,7 @@
 	"name": "nextjs-graphql",
 	"version": "0.1.0",
 	"private": true,
+	"packageManager": "pnpm@10.5.2",
 	"scripts": {
 		"dev": "next telemetry disable && next dev",
 		"build": "next telemetry disable && next build",

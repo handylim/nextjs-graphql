@@ -1,17 +1,21 @@
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 LABEL stage=builder
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY . .
-RUN npm install --location=global pnpm && pnpm install --frozen-lockfile && pnpm run test:ci && pnpm run build
+RUN apk add --no-cache libc6-compat && \
+    corepack enable && \
+    corepack prepare pnpm@10.5.2 --activate &&  \
+    pnpm install --frozen-lockfile &&  \
+    pnpm run test:ci &&  \
+    pnpm run build
 
 
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
-RUN apk add -U tzdata
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN apk add -U tzdata && \
+    addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/public ./public
